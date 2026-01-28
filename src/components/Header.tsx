@@ -12,9 +12,9 @@ export function Header({ cartCount, onCartClick }: HeaderProps) {
       <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-            <span className="text-white font-black text-lg">P</span>
+            <span className="text-white font-black text-lg">F</span>
           </div>
-          <span className="font-black text-xl tracking-tighter text-dark">Premium</span>
+          <span className="font-black text-xl tracking-tighter text-dark">Fintech E-commerce Checkout</span>
         </div>
         <button
           id="cart-icon"
