@@ -32,18 +32,18 @@ export function OrderSummaryStep({ items, onConfirm }: OrderSummaryStepProps) {
               <span className="w-6 h-6 rounded-lg bg-primary text-accent flex items-center justify-center text-[10px] font-black">x{item.quantity}</span>
               <span className="text-sm font-bold text-dark/70 truncate max-w-30">{item.name}</span>
             </div>
-            <span className="font-black text-dark">${formatCurrency(calculateLineTotal(item))}</span>
+            <span className="font-black text-dark">{formatCurrency(calculateLineTotal(item))}</span>
           </div>
         ))}
       </div>
       <div className="bg-dark text-white rounded-3xl p-6 mb-8 space-y-3 shadow-2xl">
         <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest opacity-40">
           <span>Processing & Delivery</span>
-          <span>${formatCurrency(feesTotal)}</span>
+          <span>{formatCurrency(feesTotal)}</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="font-black text-xl tracking-tighter">Total Due</span>
-          <div className="bg-accent px-4 py-2 rounded-xl text-dark font-black text-xl">${formatCurrency(totalPrice)}</div>
+          <div className="bg-accent px-4 py-2 rounded-xl text-dark font-black text-xl">{formatCurrency(totalPrice)}</div>
         </div>
       </div>
       <button

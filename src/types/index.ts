@@ -28,9 +28,12 @@ export interface CartItem {
 export type CheckoutStep = 'PRODUCT_DETAIL' | 'FORM' | 'SUMMARY' | 'RESULT'
 
 export interface CheckoutData {
+  cardholderName: string
   cardNumber: string
   expiryDate: string
   cvv: string
+  fullName: string
+  phone: string
   address: string
   city: string
 }

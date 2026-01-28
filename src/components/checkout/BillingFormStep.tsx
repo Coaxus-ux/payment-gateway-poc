@@ -47,6 +47,13 @@ export function BillingFormStep({ initialData, onBack, onSubmit }: BillingFormSt
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-3">
           <input
+            placeholder="Cardholder Name"
+            value={formData.cardholderName}
+            onChange={(e) => updateField('cardholderName', e.target.value)}
+            className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
+            required
+          />
+          <input
             placeholder="0000 0000 0000 0000"
             value={formData.cardNumber}
             onChange={handleCardNumberChange}
@@ -72,6 +79,21 @@ export function BillingFormStep({ initialData, onBack, onSubmit }: BillingFormSt
           </div>
         </div>
         <div className="space-y-3">
+          <input
+            placeholder="Full Name"
+            value={formData.fullName}
+            onChange={(e) => updateField('fullName', e.target.value)}
+            className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
+            required
+          />
+          <input
+            placeholder="Phone Number"
+            type="tel"
+            value={formData.phone}
+            onChange={(e) => updateField('phone', e.target.value)}
+            className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
+            required
+          />
           <input
             placeholder="Street Address"
             value={formData.address}

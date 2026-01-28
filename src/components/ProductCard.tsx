@@ -53,7 +53,7 @@ export function ProductCard({ product, onBuyNow, onAddToCart }: ProductCardProps
       <div className="flex items-center justify-between pt-4 border-t border-dark/5">
         <div className="flex flex-col">
           <span className="text-[10px] text-dark/40 font-bold uppercase tracking-wider">Starting at</span>
-          <span className="text-primary font-black text-2xl tracking-tighter">${formatCurrency(product.price)}</span>
+          <span className="text-primary font-black text-2xl tracking-tighter">{formatCurrency(product.price)}</span>
         </div>
 
         <div className="flex items-center gap-2">
