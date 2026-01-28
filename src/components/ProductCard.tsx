@@ -111,7 +111,7 @@ export function ProductCard({ product, onBuyNow, onAddToCart }: ProductCardProps
         <div className="flex flex-col">
           <span className="text-[9px] text-dark/30 font-black uppercase tracking-[0.25em]">MSRP</span>
           <span className="text-primary font-black text-xl sm:text-2xl tracking-tighter wrap-break-words leading-tight">
-            {formatCurrency(product.price)}
+            {formatCurrency(product.price, product.currency)}
           </span>
         </div>
 

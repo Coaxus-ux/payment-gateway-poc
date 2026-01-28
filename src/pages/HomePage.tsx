@@ -1,31 +1,84 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import gsap from 'gsap'
-import type { Product, CheckoutStep, CheckoutData, PurchaseResult } from '@/types'
+import type { CardData, CheckoutCustomer, CheckoutDelivery, CheckoutStep, Product, PurchaseResult } from '@/types'
 import { useFlyingAnimation } from '@/hooks'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import { addItem, clearCart, removeItem, resetCheckoutData, setCheckoutData, updateQuantity } from '@/store/cart/slice'
-import { selectCartItems, selectCartTotalItems, selectCheckoutData } from '@/store/cart/selectors'
-import { selectProducts } from '@/store/products/selectors'
+import {
+  addItem,
+  clearCart,
+  removeItem,
+  resetCheckoutData,
+  setCheckoutCustomer,
+  setCheckoutDelivery,
+  setCheckoutIds,
+  setCheckoutRequestId,
+  setCheckoutSelection,
+  updateItemPrice,
+  updateQuantity,
+} from '@/store/cart/slice'
+import {
+  selectCartItems,
+  selectCartTotalItems,
+  selectCheckoutCustomer,
+  selectCheckoutDelivery,
+  selectCheckoutIds,
+  selectCheckoutSelection,
+} from '@/store/cart/selectors'
+import { fetchProductById, fetchProducts } from '@/store/products/slice'
+import { selectProductById, selectProducts, selectProductsError, selectProductsStatus } from '@/store/products/selectors'
 import { ProductCard } from '@/components/ProductCard'
 import { CartDrawer } from '@/components/CartDrawer'
 import { CheckoutModal } from '@/components/CheckoutModal'
-import { processPayment } from '@/utils/payment'
+import { Toast, type ToastVariant } from '@/components/Toast'
+import { createTransaction, payTransaction, updateDelivery } from '@/api/transactions'
+import { isApiError } from '@/api/client'
+
+interface ToastState {
+  message: string
+  variant?: ToastVariant
+  requestId?: string
+}
 
 export function HomePage() {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const items = useAppSelector(selectCartItems)
   const totalItems = useAppSelector(selectCartTotalItems)
-  const checkoutData = useAppSelector(selectCheckoutData)
+  const checkoutSelection = useAppSelector(selectCheckoutSelection)
+  const checkoutCustomer = useAppSelector(selectCheckoutCustomer)
+  const checkoutDelivery = useAppSelector(selectCheckoutDelivery)
+  const checkoutIds = useAppSelector(selectCheckoutIds)
   const products = useAppSelector(selectProducts)
+  const productsStatus = useAppSelector(selectProductsStatus)
+  const productsError = useAppSelector(selectProductsError)
+  const selectedProduct = useAppSelector((state) => (checkoutSelection?.productId ? selectProductById(state, checkoutSelection.productId) : undefined))
+  const checkoutProduct =
+    selectedProduct ??
+    (items[0]
+      ? {
+          id: items[0].id,
+          name: items[0].name,
+          description: items[0].name,
+          longDescription: items[0].longDescription,
+          price: items[0].price,
+          currency: items[0].currency,
+          stock: 0,
+          image: items[0].image,
+        }
+      : null)
 
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep | null>(null)
   const [purchaseResult, setPurchaseResult] = useState<PurchaseResult | null>(null)
-  const [checkoutItem, setCheckoutItem] = useState<Product | null>(null)
+  const [cardData, setCardData] = useState<CardData | null>(null)
+  const [isCreatingTransaction, setIsCreatingTransaction] = useState(false)
+  const [isPaying, setIsPaying] = useState(false)
+  const [isUpdatingDelivery, setIsUpdatingDelivery] = useState(false)
+  const [toast, setToast] = useState<ToastState | null>(null)
 
   const catalogRef = useRef<HTMLDivElement>(null)
+  const loaderRef = useRef<HTMLDivElement>(null)
 
   const { animate: flyToCart } = useFlyingAnimation({
     targetSelector: '#cart-icon',
@@ -33,12 +86,58 @@ export function HomePage() {
   })
 
   useEffect(() => {
+    if (productsStatus === 'idle') {
+      dispatch(fetchProducts())
+    }
+  }, [dispatch, productsStatus])
+
+  useEffect(() => {
+    if (checkoutSelection?.productId && !selectedProduct) {
+      dispatch(fetchProductById(checkoutSelection.productId))
+    }
+  }, [checkoutSelection?.productId, dispatch, selectedProduct])
+
+  useEffect(() => {
     if (!catalogRef.current) return
 
     const tl = gsap.timeline()
     tl.fromTo('.header-anim', { y: -50, opacity: 0 }, { y: 0, opacity: 1, duration: 1, ease: 'power4.out' })
       .fromTo('.hero-title-anim', { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 1, ease: 'power4.out' }, '-=0.6')
-      .fromTo('.product-card-anim', { scale: 0.9, y: 60, opacity: 0 }, { scale: 1, y: 0, opacity: 1, duration: 1.2, stagger: 0.15, ease: 'power4.out' }, '-=0.8')
+  }, [])
+
+  useEffect(() => {
+    if (products.length === 0) return
+    gsap.set('.product-card-anim', { opacity: 0, y: 60, scale: 0.96 })
+    gsap.to('.product-card-anim', {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      duration: 1,
+      ease: 'power4.out',
+      stagger: 0.12,
+      clearProps: 'transform',
+    })
+  }, [products.length])
+
+  useEffect(() => {
+    if (!loaderRef.current) return
+    const ctx = gsap.context(() => {
+      gsap.set('.loader-dot', { scale: 0.6, opacity: 0.4 })
+      gsap.to('.loader-dot', {
+        scale: 1,
+        opacity: 1,
+        duration: 0.6,
+        repeat: -1,
+        yoyo: true,
+        ease: 'power2.inOut',
+        stagger: 0.15,
+      })
+    }, loaderRef)
+    return () => ctx.revert()
+  }, [])
+
+  const showToast = useCallback((message: string, variant: ToastVariant = 'info', requestId?: string) => {
+    setToast({ message, variant, requestId })
   }, [])
 
   const handleAddToCart = useCallback(
@@ -46,14 +145,14 @@ export function HomePage() {
       flyToCart(element)
       dispatch(addItem(product))
     },
-    [dispatch, flyToCart],
+    [dispatch, flyToCart]
   )
 
   const handleBuyNow = useCallback(
     (product: Product) => {
       navigate(`/product/${product.id}`)
     },
-    [navigate],
+    [navigate]
   )
 
   const handleOpenCart = useCallback(() => {
@@ -65,48 +164,200 @@ export function HomePage() {
   }, [])
 
   const handleCheckout = useCallback(() => {
+    if (items.length === 0) return
+    const primaryItem = items[0]
+    if (items.length > 1) {
+      showToast('Solo se procesará el primer producto del carrito.', 'info')
+    }
+    dispatch(
+      setCheckoutSelection({
+        productId: primaryItem.id,
+        amount: primaryItem.price * primaryItem.quantity,
+        currency: primaryItem.currency ?? 'COP',
+      })
+    )
     setIsCartOpen(false)
     setCheckoutStep('PRODUCT_DETAIL')
-  }, [])
+  }, [dispatch, items, showToast])
 
   const handleStartCheckout = useCallback(() => {
     setCheckoutStep('FORM')
   }, [])
 
   const handleContinue = useCallback(
-    (data: CheckoutData) => {
-      dispatch(setCheckoutData(data))
-      setCheckoutStep('SUMMARY')
+    async (data: { customer: CheckoutCustomer; delivery: CheckoutDelivery; card: CardData }) => {
+      const selection =
+        checkoutSelection ??
+        (items[0]
+          ? {
+              productId: items[0].id,
+              amount: items[0].price * items[0].quantity,
+              currency: items[0].currency ?? 'COP',
+            }
+          : null)
+
+      if (!selection) {
+        showToast('Selecciona un producto primero.', 'error')
+        return
+      }
+
+      setIsCreatingTransaction(true)
+      setCardData(data.card)
+      dispatch(setCheckoutCustomer(data.customer))
+      dispatch(setCheckoutDelivery(data.delivery))
+
+      try {
+        const response = await createTransaction({
+          productId: selection.productId,
+          amount: selection.amount,
+          currency: selection.currency,
+          customer: data.customer,
+          delivery: data.delivery,
+        })
+
+        const transactionId = response.data.transactionId ?? response.data.id
+        if (!transactionId) {
+          throw new Error('Missing transaction id')
+        }
+
+        dispatch(setCheckoutIds({ transactionId, deliveryId: response.data.deliveryId }))
+        dispatch(setCheckoutRequestId(response.requestId))
+        setCheckoutStep('SUMMARY')
+      } catch (error) {
+        if (isApiError(error)) {
+          dispatch(setCheckoutRequestId(error.requestId))
+          if (error.code === 'OUT_OF_STOCK') {
+            showToast('Producto sin stock. Revisa el detalle.', 'error', error.requestId)
+            setCheckoutStep(null)
+            navigate(`/product/${selection.productId}`)
+            return
+          }
+          if (error.code === 'AMOUNT_MISMATCH') {
+            try {
+              const updated = await dispatch(fetchProductById(selection.productId)).unwrap()
+              const item = items.find((entry) => entry.id === updated.data.id)
+              const nextAmount = item ? updated.data.price * item.quantity : updated.data.price
+              dispatch(setCheckoutSelection({
+                productId: updated.data.id,
+                amount: nextAmount,
+                currency: updated.data.currency ?? selection.currency,
+              }))
+              dispatch(updateItemPrice({ id: updated.data.id, price: updated.data.price, currency: updated.data.currency }))
+              showToast('Precio actualizado desde el backend. Revisa el monto.', 'info', error.requestId)
+            } catch {
+              showToast(error.message, 'error', error.requestId)
+            }
+            return
+          }
+          showToast(error.message, 'error', error.requestId)
+        } else {
+          showToast('No se pudo crear la transacción.', 'error')
+        }
+      } finally {
+        setIsCreatingTransaction(false)
+      }
     },
-    [dispatch],
+    [checkoutCustomer, checkoutDelivery, checkoutSelection, dispatch, items, navigate, showToast]
+  )
+
+  const handleUpdateDelivery = useCallback(
+    async (delivery: CheckoutDelivery) => {
+      if (!checkoutIds.transactionId || !checkoutIds.deliveryId) {
+        showToast('No hay una entrega activa para actualizar.', 'error')
+        return
+      }
+
+      setIsUpdatingDelivery(true)
+      try {
+        const response = await updateDelivery(checkoutIds.deliveryId, checkoutIds.transactionId, delivery)
+        dispatch(setCheckoutDelivery(delivery))
+        dispatch(setCheckoutRequestId(response.requestId))
+        showToast('Entrega actualizada.', 'success', response.requestId)
+      } catch (error) {
+        if (isApiError(error)) {
+          dispatch(setCheckoutRequestId(error.requestId))
+          showToast(error.message, 'error', error.requestId)
+        } else {
+          showToast('No se pudo actualizar la entrega.', 'error')
+        }
+      } finally {
+        setIsUpdatingDelivery(false)
+      }
+    },
+    [checkoutIds.deliveryId, checkoutIds.transactionId, dispatch, showToast]
   )
 
   const handleConfirm = useCallback(async () => {
-    const result = await processPayment(checkoutData)
-    setPurchaseResult(result)
-    setCheckoutStep('RESULT')
-  }, [checkoutData])
+    if (!checkoutIds.transactionId) {
+      showToast('Falta el transactionId.', 'error')
+      return
+    }
+    if (!cardData) {
+      showToast('Ingresa los datos de la tarjeta.', 'error')
+      return
+    }
+
+    setIsPaying(true)
+    try {
+      const response = await payTransaction(checkoutIds.transactionId, cardData)
+      dispatch(setCheckoutRequestId(response.requestId))
+      const normalizedStatus = response.data.status?.toUpperCase()
+      const isSuccess = normalizedStatus === 'SUCCESS' || normalizedStatus === 'PAID' || normalizedStatus === 'APPROVED'
+      const isFailed = normalizedStatus === 'FAILED' || normalizedStatus === 'DECLINED'
+      const message = response.data.message ?? (isSuccess ? 'Pago aprobado.' : 'Pago rechazado. Intenta nuevamente.')
+
+      setPurchaseResult({
+        status: isSuccess && !isFailed ? 'success' : 'error',
+        transactionId: response.data.transactionId ?? checkoutIds.transactionId,
+        message,
+        requestId: response.requestId,
+      })
+      setCheckoutStep('RESULT')
+    } catch (error) {
+      if (isApiError(error)) {
+        dispatch(setCheckoutRequestId(error.requestId))
+        const message = error.code === 'PAYMENT_FAILED' ? 'Pago rechazado. Intenta nuevamente.' : error.message
+        setPurchaseResult({ status: 'error', message, requestId: error.requestId })
+        setCheckoutStep('RESULT')
+      } else {
+        setPurchaseResult({ status: 'error', message: 'No se pudo procesar el pago.' })
+        setCheckoutStep('RESULT')
+      }
+    } finally {
+      setIsPaying(false)
+    }
+  }, [cardData, checkoutIds.transactionId, dispatch, showToast])
 
   const handleBack = useCallback(() => {
     setCheckoutStep('PRODUCT_DETAIL')
   }, [])
 
   const handleFinish = useCallback(() => {
+    const productId = checkoutSelection?.productId
     setCheckoutStep(null)
     setPurchaseResult(null)
+    setCardData(null)
     dispatch(clearCart())
     dispatch(resetCheckoutData())
-  }, [dispatch])
+    if (productId) {
+      navigate(`/product/${productId}`)
+      dispatch(fetchProductById(productId))
+    }
+  }, [checkoutSelection?.productId, dispatch, navigate])
 
   const handleRetry = useCallback(() => {
-    setCheckoutStep('FORM')
-    setPurchaseResult(null)
-  }, [])
+    if (!cardData) {
+      setCheckoutStep('FORM')
+      setPurchaseResult(null)
+      return
+    }
+    void handleConfirm()
+  }, [cardData, handleConfirm])
 
   const handleCloseModal = useCallback(() => {
     setCheckoutStep(null)
     setPurchaseResult(null)
-    setCheckoutItem(null)
+    setCardData(null)
   }, [])
 
   return (
@@ -157,6 +408,20 @@ export function HomePage() {
             <p className="text-xl text-dark/40 font-medium max-w-lg">Advanced biological-to-digital hardware. Performance without compromise.</p>
           </div>
 
+          {productsStatus === 'loading' && products.length === 0 && (
+            <div ref={loaderRef} className="flex items-center gap-4 text-dark/50 font-semibold">
+              <div className="flex items-center gap-2">
+                <span className="loader-dot w-3 h-3 rounded-full bg-primary/80" />
+                <span className="loader-dot w-3 h-3 rounded-full bg-primary/60" />
+                <span className="loader-dot w-3 h-3 rounded-full bg-primary/40" />
+              </div>
+              <span>Cargando catálogo...</span>
+            </div>
+          )}
+          {productsStatus === 'failed' && productsError && (
+            <p className="text-red-500 font-semibold">{productsError.message}</p>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             {products.map((product) => (
               <div key={product.id} className="product-card-anim opacity-0">
@@ -178,19 +443,28 @@ export function HomePage() {
 
       {checkoutStep && (
         <CheckoutModal
-          cartItems={checkoutItem ? [{ ...checkoutItem, quantity: 1 }] : items}
+          product={checkoutProduct}
+          amount={checkoutSelection?.amount ?? 0}
+          currency={checkoutSelection?.currency ?? 'COP'}
+          customer={checkoutCustomer}
+          delivery={checkoutDelivery}
           step={checkoutStep}
-          checkoutData={checkoutData}
           onClose={handleCloseModal}
           onStartCheckout={handleStartCheckout}
           onContinue={handleContinue}
           onConfirm={handleConfirm}
+          onUpdateDelivery={handleUpdateDelivery}
+          isCreatingTransaction={isCreatingTransaction}
+          isPaying={isPaying}
+          isUpdatingDelivery={isUpdatingDelivery}
           onBack={handleBack}
           purchaseResult={purchaseResult}
           onFinish={handleFinish}
           onRetry={handleRetry}
         />
       )}
+
+      {toast && <Toast message={toast.message} variant={toast.variant} requestId={toast.requestId} onDismiss={() => setToast(null)} />}
     </div>
   )
 }

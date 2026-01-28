@@ -25,7 +25,7 @@ export function ProductInfo({ product }: ProductInfoProps) {
       <div className="flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-10 mb-10 sm:mb-12 detail-fade">
         <div className="flex flex-col">
           <span className="text-[10px] text-dark/30 font-black uppercase tracking-[0.4em] mb-2">Value</span>
-          <span className="text-4xl sm:text-5xl font-black text-primary tracking-tighter">{formatCurrency(product.price)}</span>
+          <span className="text-4xl sm:text-5xl font-black text-primary tracking-tighter">{formatCurrency(product.price, product.currency)}</span>
         </div>
         <div className="hidden sm:block h-16 w-px bg-dark/10" />
         <div className="flex flex-col">

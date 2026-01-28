@@ -1,14 +1,12 @@
 import type { CartItem } from '@/types'
 
-const currencyFormatter = new Intl.NumberFormat('es-CO', {
-  style: 'currency',
-  currency: 'COP',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-})
-
-export function formatCurrency(value: number): string {
-  return currencyFormatter.format(value)
+export function formatCurrency(value: number, currency = 'COP', locale = 'es-CO'): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value)
 }
 
 export function calculateLineTotal(item: Pick<CartItem, 'price' | 'quantity'>): number {

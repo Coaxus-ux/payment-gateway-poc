@@ -18,6 +18,7 @@ export function CartDrawer({ isOpen, onClose, items, onUpdateQuantity, onRemove,
   const { drawerRef, backdropRef } = useDrawerAnimation({ isOpen })
 
   const subtotal = calculateSubtotal(items)
+  const currency = items[0]?.currency
 
   return (
     <>
@@ -46,7 +47,7 @@ export function CartDrawer({ isOpen, onClose, items, onUpdateQuantity, onRemove,
               </div>
               <div className="text-right">
                 <span className="text-dark/30 text-[10px] font-bold uppercase tracking-widest block mb-1">Subtotal</span>
-                <span className="text-3xl font-black text-dark tracking-tighter leading-none">{formatCurrency(subtotal)}</span>
+                <span className="text-3xl font-black text-dark tracking-tighter leading-none">{formatCurrency(subtotal, currency)}</span>
               </div>
             </div>
             <button

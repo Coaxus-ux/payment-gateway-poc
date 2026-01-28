@@ -1,36 +1,48 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { FaCcVisa, FaCcMastercard } from 'react-icons/fa'
 import { HiArrowLeft } from 'react-icons/hi'
-import type { CheckoutData } from '@/types'
-import { getCardBrand, sanitizeCardNumber } from '@/utils/payment'
+import type { CardData, CheckoutCustomer, CheckoutDelivery } from '@/types'
+import { getCardBrand, isValidExpiry, isValidLuhn, sanitizeCardNumber } from '@/utils/payment'
 import { CheckoutProgress } from './CheckoutProgress'
 
 interface BillingFormStepProps {
-  initialData: CheckoutData
+  initialCustomer: CheckoutCustomer
+  initialDelivery: CheckoutDelivery
   onBack: () => void
-  onSubmit: (data: CheckoutData) => void
+  onSubmit: (data: { customer: CheckoutCustomer; delivery: CheckoutDelivery; card: CardData }) => void
+  isSubmitting?: boolean
 }
 
-export function BillingFormStep({ initialData, onBack, onSubmit }: BillingFormStepProps) {
-  const [formData, setFormData] = useState<CheckoutData>(initialData)
+const emptyCard: CardData = {
+  number: '',
+  expMonth: 0,
+  expYear: 0,
+  cvc: '',
+  holderName: '',
+}
+
+export function BillingFormStep({ initialCustomer, initialDelivery, onBack, onSubmit, isSubmitting }: BillingFormStepProps) {
+  const [customer, setCustomer] = useState<CheckoutCustomer>(initialCustomer)
+  const [delivery, setDelivery] = useState<CheckoutDelivery>(initialDelivery)
+  const [card, setCard] = useState<CardData>(emptyCard)
+  const [touched, setTouched] = useState(false)
+
+  const cardBrand = useMemo(() => getCardBrand(card.number), [card.number])
+  const isCardNumberValid = useMemo(() => isValidLuhn(card.number), [card.number])
+  const isExpiryValid = useMemo(() => isValidExpiry(card.expMonth, card.expYear), [card.expMonth, card.expYear])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit(formData)
-  }
+    setTouched(true)
 
-  const updateField = <K extends keyof CheckoutData>(key: K, value: CheckoutData[K]) => {
-    setFormData((prev) => ({ ...prev, [key]: value }))
-  }
+    if (!isCardNumberValid || !isExpiryValid) return
 
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateField('cardNumber', sanitizeCardNumber(e.target.value))
+    onSubmit({ customer, delivery, card })
   }
 
   const renderCardIcon = () => {
-    const brand = getCardBrand(formData.cardNumber)
-    if (brand === 'visa') return <FaCcVisa className="text-2xl text-blue-600" />
-    if (brand === 'mastercard') return <FaCcMastercard className="text-2xl text-orange-500" />
+    if (cardBrand === 'visa') return <FaCcVisa className="text-2xl text-blue-600" />
+    if (cardBrand === 'mastercard') return <FaCcMastercard className="text-2xl text-orange-500" />
     return null
   }
 
@@ -48,69 +60,108 @@ export function BillingFormStep({ initialData, onBack, onSubmit }: BillingFormSt
         <div className="space-y-3">
           <input
             placeholder="Cardholder Name"
-            value={formData.cardholderName}
-            onChange={(e) => updateField('cardholderName', e.target.value)}
+            value={card.holderName}
+            onChange={(e) => setCard((prev) => ({ ...prev, holderName: e.target.value }))}
             className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
             required
           />
           <input
             placeholder="0000 0000 0000 0000"
-            value={formData.cardNumber}
-            onChange={handleCardNumberChange}
+            value={card.number}
+            onChange={(e) => setCard((prev) => ({ ...prev, number: sanitizeCardNumber(e.target.value) }))}
             className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all font-mono"
             required
           />
+          {touched && !isCardNumberValid && <p className="text-xs text-red-500 font-semibold">Invalid card number (Luhn).</p>}
           <div className="flex gap-3">
             <input
-              placeholder="MM/YY"
-              value={formData.expiryDate}
-              onChange={(e) => updateField('expiryDate', e.target.value)}
+              placeholder="MM"
+              value={card.expMonth || ''}
+              onChange={(e) => setCard((prev) => ({ ...prev, expMonth: Number.parseInt(e.target.value || '0', 10) }))}
               className="flex-1 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
               required
             />
             <input
-              placeholder="CVV"
+              placeholder="YYYY"
+              value={card.expYear || ''}
+              onChange={(e) => setCard((prev) => ({ ...prev, expYear: Number.parseInt(e.target.value || '0', 10) }))}
+              className="flex-1 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
+              required
+            />
+            <input
+              placeholder="CVC"
               type="password"
-              value={formData.cvv}
-              onChange={(e) => updateField('cvv', e.target.value)}
+              value={card.cvc}
+              onChange={(e) => setCard((prev) => ({ ...prev, cvc: e.target.value.replace(/\D/g, '').substring(0, 4) }))}
               className="flex-1 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
               required
             />
           </div>
+          {touched && !isExpiryValid && <p className="text-xs text-red-500 font-semibold">Invalid expiration date.</p>}
         </div>
         <div className="space-y-3">
           <input
+            placeholder="Email"
+            type="email"
+            value={customer.email}
+            onChange={(e) => setCustomer((prev) => ({ ...prev, email: e.target.value }))}
+            className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
+            required
+          />
+          <input
             placeholder="Full Name"
-            value={formData.fullName}
-            onChange={(e) => updateField('fullName', e.target.value)}
+            value={customer.fullName}
+            onChange={(e) => setCustomer((prev) => ({ ...prev, fullName: e.target.value }))}
             className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
             required
           />
           <input
             placeholder="Phone Number"
             type="tel"
-            value={formData.phone}
-            onChange={(e) => updateField('phone', e.target.value)}
-            className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
-            required
-          />
-          <input
-            placeholder="Street Address"
-            value={formData.address}
-            onChange={(e) => updateField('address', e.target.value)}
-            className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
-            required
-          />
-          <input
-            placeholder="City"
-            value={formData.city}
-            onChange={(e) => updateField('city', e.target.value)}
+            value={customer.phone}
+            onChange={(e) => setCustomer((prev) => ({ ...prev, phone: e.target.value }))}
             className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
             required
           />
         </div>
-        <button type="submit" className="w-full py-5 rounded-2xl bg-primary text-white font-black shadow-xl shadow-primary/30 active:scale-95 transition-all">
-          Review Order
+        <div className="space-y-3">
+          <input
+            placeholder="Street Address"
+            value={delivery.addressLine1}
+            onChange={(e) => setDelivery((prev) => ({ ...prev, addressLine1: e.target.value }))}
+            className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
+            required
+          />
+          <div className="flex gap-3">
+            <input
+              placeholder="City"
+              value={delivery.city}
+              onChange={(e) => setDelivery((prev) => ({ ...prev, city: e.target.value }))}
+              className="flex-1 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
+              required
+            />
+            <input
+              placeholder="Postal Code"
+              value={delivery.postalCode}
+              onChange={(e) => setDelivery((prev) => ({ ...prev, postalCode: e.target.value }))}
+              className="flex-1 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
+              required
+            />
+          </div>
+          <input
+            placeholder="Country"
+            value={delivery.country}
+            onChange={(e) => setDelivery((prev) => ({ ...prev, country: e.target.value }))}
+            className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
+            required
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full py-5 rounded-2xl bg-primary text-white font-black shadow-xl shadow-primary/30 active:scale-95 transition-all"
+        >
+          {isSubmitting ? 'Processing...' : 'Review Order'}
         </button>
       </form>
     </div>

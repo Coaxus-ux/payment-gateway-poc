@@ -1,22 +1,29 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useHeroImageAnimation } from '@/hooks'
 import { cn } from '@/utils/cn'
 
 interface ProductGalleryProps {
   mainImage: string
   productName: string
+  images?: string[]
   onImageRef?: (ref: HTMLImageElement | null) => void
 }
 
-export function ProductGallery({ mainImage, productName, onImageRef }: ProductGalleryProps) {
+export function ProductGallery({ mainImage, productName, images, onImageRef }: ProductGalleryProps) {
   const { animateImage } = useHeroImageAnimation()
   const [selectedImage, setSelectedImage] = useState(mainImage)
 
-  const gallery = [
-    mainImage,
-    `${mainImage}&auto=format&fit=crop&q=80&w=800&sat=-100`,
-    `${mainImage}&auto=format&fit=crop&q=80&w=800&hue=180`,
-  ]
+  useEffect(() => {
+    setSelectedImage(mainImage)
+  }, [mainImage])
+
+  const gallery = images && images.length > 0
+    ? images
+    : [
+        mainImage,
+        `${mainImage}&auto=format&fit=crop&q=80&w=800&sat=-100`,
+        `${mainImage}&auto=format&fit=crop&q=80&w=800&hue=180`,
+      ]
 
   const handleImageRef = useCallback(
     (el: HTMLImageElement | null) => {

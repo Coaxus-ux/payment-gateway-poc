@@ -1,25 +1,36 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import type { CartItem, CheckoutData, Product } from '@/types'
+import type { CartItem, CheckoutCustomer, CheckoutData, CheckoutDelivery, CheckoutSelection, Product } from '@/types'
 
 export interface CartState {
   items: CartItem[]
   checkoutData: CheckoutData
 }
 
-const initialCheckoutData: CheckoutData = {
-  cardholderName: '',
-  cardNumber: '',
-  expiryDate: '',
-  cvv: '',
+const initialCustomer: CheckoutCustomer = {
+  email: '',
   fullName: '',
   phone: '',
-  address: '',
-  city: '',
 }
+
+const initialDelivery: CheckoutDelivery = {
+  addressLine1: '',
+  city: '',
+  country: '',
+  postalCode: '',
+}
+
+const createInitialCheckoutData = (): CheckoutData => ({
+  selection: null,
+  customer: { ...initialCustomer },
+  delivery: { ...initialDelivery },
+  transactionId: undefined,
+  deliveryId: undefined,
+  lastRequestId: undefined,
+})
 
 const initialState: CartState = {
   items: [],
-  checkoutData: initialCheckoutData,
+  checkoutData: createInitialCheckoutData(),
 }
 
 const cartSlice = createSlice({
@@ -37,6 +48,7 @@ const cartSlice = createSlice({
         id: product.id,
         name: product.name,
         price: product.price,
+        currency: product.currency,
         quantity: 1,
         image: product.image,
         longDescription: product.longDescription,
@@ -56,17 +68,48 @@ const cartSlice = createSlice({
     removeItem(state, action: PayloadAction<string>) {
       state.items = state.items.filter((entry) => entry.id !== action.payload)
     },
+    updateItemPrice(state, action: PayloadAction<{ id: string; price: number; currency?: string }>) {
+      const item = state.items.find((entry) => entry.id === action.payload.id)
+      if (!item) return
+      item.price = action.payload.price
+      item.currency = action.payload.currency
+    },
     clearCart(state) {
       state.items = []
     },
-    setCheckoutData(state, action: PayloadAction<CheckoutData>) {
-      state.checkoutData = action.payload
+    setCheckoutSelection(state, action: PayloadAction<CheckoutSelection | null>) {
+      state.checkoutData.selection = action.payload
+    },
+    setCheckoutCustomer(state, action: PayloadAction<CheckoutCustomer>) {
+      state.checkoutData.customer = action.payload
+    },
+    setCheckoutDelivery(state, action: PayloadAction<CheckoutDelivery>) {
+      state.checkoutData.delivery = action.payload
+    },
+    setCheckoutIds(state, action: PayloadAction<{ transactionId?: string; deliveryId?: string }>) {
+      state.checkoutData.transactionId = action.payload.transactionId
+      state.checkoutData.deliveryId = action.payload.deliveryId
+    },
+    setCheckoutRequestId(state, action: PayloadAction<string | undefined>) {
+      state.checkoutData.lastRequestId = action.payload
     },
     resetCheckoutData(state) {
-      state.checkoutData = initialCheckoutData
+      state.checkoutData = createInitialCheckoutData()
     },
   },
 })
 
-export const { addItem, updateQuantity, removeItem, clearCart, setCheckoutData, resetCheckoutData } = cartSlice.actions
+export const {
+  addItem,
+  updateQuantity,
+  removeItem,
+  updateItemPrice,
+  clearCart,
+  setCheckoutSelection,
+  setCheckoutCustomer,
+  setCheckoutDelivery,
+  setCheckoutIds,
+  setCheckoutRequestId,
+  resetCheckoutData,
+} = cartSlice.actions
 export const cartReducer = cartSlice.reducer

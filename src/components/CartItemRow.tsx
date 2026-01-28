@@ -36,7 +36,7 @@ export function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowPro
         </div>
         <div className="grow">
           <h4 className="font-bold text-dark text-sm leading-tight mb-1 truncate max-w-30">{item.name}</h4>
-          <p className="text-primary font-black text-sm mb-2">{formatCurrency(item.price)}</p>
+          <p className="text-primary font-black text-sm mb-2">{formatCurrency(item.price, item.currency)}</p>
           <QuantitySelector quantity={item.quantity} onIncrement={handleIncrement} onDecrement={handleDecrement} />
         </div>
 
