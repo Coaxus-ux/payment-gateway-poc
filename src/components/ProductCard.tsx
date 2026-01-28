@@ -1,6 +1,8 @@
 import { useRef } from 'react'
+import { HiPlus } from 'react-icons/hi'
 import type { Product } from '@/types'
 import { cn } from '@/utils/cn'
+import { formatCurrency } from '@/utils/pricing'
 
 interface ProductCardProps {
   product: Product
@@ -51,7 +53,7 @@ export function ProductCard({ product, onBuyNow, onAddToCart }: ProductCardProps
       <div className="flex items-center justify-between pt-4 border-t border-dark/5">
         <div className="flex flex-col">
           <span className="text-[10px] text-dark/40 font-bold uppercase tracking-wider">Starting at</span>
-          <span className="text-primary font-black text-2xl tracking-tighter">${product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+          <span className="text-primary font-black text-2xl tracking-tighter">${formatCurrency(product.price)}</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -62,10 +64,7 @@ export function ProductCard({ product, onBuyNow, onAddToCart }: ProductCardProps
             aria-label="Add to cart"
             className={cn('p-3 rounded-xl transition-all active:scale-95', isOutOfStock ? 'bg-dark/5 text-dark/30 cursor-not-allowed' : 'bg-secondary/30 text-primary hover:bg-secondary/50')}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
+            <HiPlus className="w-5 h-5" />
           </button>
 
           <button
