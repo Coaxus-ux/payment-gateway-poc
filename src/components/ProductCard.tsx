@@ -40,7 +40,7 @@ export function ProductCard({ product, onBuyNow, onAddToCart }: ProductCardProps
               isOutOfStock ? 'bg-dark/20 text-dark/60' : 'bg-secondary/40 text-primary',
             )}
           >
-            {isOutOfStock ? 'Out of Stock' : `${product.stock} in stock`}
+            {isOutOfStock ? 'Out of Stock' : `{product.stock} in stock`}
           </span>
         </div>
       </div>

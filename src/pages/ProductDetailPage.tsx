@@ -1,8 +1,11 @@
 import { useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { CheckoutStep, CheckoutData, PurchaseResult } from '@/types'
-import { usePageTransition, useCartState, useFlyingAnimation } from '@/hooks'
-import { MOCK_PRODUCTS } from '@/constants'
+import { usePageTransition, useFlyingAnimation } from '@/hooks'
+import { useAppDispatch, useAppSelector } from '@/store/hooks'
+import { addItem, clearCart, removeItem, resetCheckoutData, setCheckoutData, updateQuantity } from '@/store/cart/slice'
+import { selectCartItems, selectCartTotalItems, selectCheckoutData } from '@/store/cart/selectors'
+import { selectProductById } from '@/store/products/selectors'
 import { Header } from '@/components/Header'
 import { CartDrawer } from '@/components/CartDrawer'
 import { CheckoutModal } from '@/components/CheckoutModal'
@@ -15,7 +18,10 @@ export function ProductDetailPage() {
   const { pageRef, animateOut } = usePageTransition()
   const imageRef = useRef<HTMLImageElement | null>(null)
 
-  const { items, totalItems, checkoutData, setCheckoutData, addItem, updateQuantity, removeItem, clearCart, resetCheckoutData } = useCartState()
+  const dispatch = useAppDispatch()
+  const items = useAppSelector(selectCartItems)
+  const totalItems = useAppSelector(selectCartTotalItems)
+  const checkoutData = useAppSelector(selectCheckoutData)
 
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep | null>(null)
@@ -26,7 +32,7 @@ export function ProductDetailPage() {
     onComplete: undefined,
   })
 
-  const product = MOCK_PRODUCTS.find((p) => p.id === productId)
+  const product = useAppSelector((state) => selectProductById(state, productId ?? ''))
 
   const handleBack = useCallback(() => {
     animateOut(() => navigate('/'))
@@ -35,16 +41,16 @@ export function ProductDetailPage() {
   const handleAddToCart = useCallback(() => {
     if (imageRef.current && product) {
       flyToCart(imageRef.current)
-      addItem(product)
+      dispatch(addItem(product))
     }
-  }, [flyToCart, addItem, product])
+  }, [dispatch, flyToCart, product])
 
   const handleBuyNow = useCallback(() => {
     if (product) {
-      addItem(product)
+      dispatch(addItem(product))
       setCheckoutStep('PRODUCT_DETAIL')
     }
-  }, [addItem, product])
+  }, [dispatch, product])
 
   const handleOpenCart = useCallback(() => {
     setIsCartOpen(true)
@@ -63,10 +69,13 @@ export function ProductDetailPage() {
     setCheckoutStep('FORM')
   }, [])
 
-  const handleContinue = useCallback((data: CheckoutData) => {
-    setCheckoutData(data)
-    setCheckoutStep('SUMMARY')
-  }, [setCheckoutData])
+  const handleContinue = useCallback(
+    (data: CheckoutData) => {
+      dispatch(setCheckoutData(data))
+      setCheckoutStep('SUMMARY')
+    },
+    [dispatch],
+  )
 
   const handleConfirm = useCallback(async () => {
     const result = await processPayment(checkoutData)
@@ -81,9 +90,9 @@ export function ProductDetailPage() {
   const handleFinish = useCallback(() => {
     setCheckoutStep(null)
     setPurchaseResult(null)
-    clearCart()
-    resetCheckoutData()
-  }, [clearCart, resetCheckoutData])
+    dispatch(clearCart())
+    dispatch(resetCheckoutData())
+  }, [dispatch])
 
   const handleRetry = useCallback(() => {
     setCheckoutStep('FORM')
@@ -128,8 +137,8 @@ export function ProductDetailPage() {
         isOpen={isCartOpen}
         onClose={handleCloseCart}
         items={items}
-        onUpdateQuantity={updateQuantity}
-        onRemove={removeItem}
+        onUpdateQuantity={(id, delta) => dispatch(updateQuantity({ id, delta }))}
+        onRemove={(id) => dispatch(removeItem(id))}
         onCheckout={handleCheckout}
       />
 

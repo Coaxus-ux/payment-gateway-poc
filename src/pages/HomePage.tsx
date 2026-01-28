@@ -1,8 +1,11 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Product, CheckoutStep, CheckoutData, PurchaseResult } from '@/types'
-import { MOCK_PRODUCTS } from '@/constants'
-import { useCartState, useFlyingAnimation } from '@/hooks'
+import { useFlyingAnimation } from '@/hooks'
+import { useAppDispatch, useAppSelector } from '@/store/hooks'
+import { addItem, clearCart, removeItem, resetCheckoutData, setCheckoutData, updateQuantity } from '@/store/cart/slice'
+import { selectCartItems, selectCartTotalItems, selectCheckoutData } from '@/store/cart/selectors'
+import { selectProducts } from '@/store/products/selectors'
 import { Header } from '@/components/Header'
 import { ProductCard } from '@/components/ProductCard'
 import { CartDrawer } from '@/components/CartDrawer'
@@ -11,7 +14,11 @@ import { processPayment } from '@/utils/payment'
 
 export function HomePage() {
   const navigate = useNavigate()
-  const { items, totalItems, checkoutData, setCheckoutData, addItem, updateQuantity, removeItem, clearCart, resetCheckoutData } = useCartState()
+  const dispatch = useAppDispatch()
+  const items = useAppSelector(selectCartItems)
+  const totalItems = useAppSelector(selectCartTotalItems)
+  const checkoutData = useAppSelector(selectCheckoutData)
+  const products = useAppSelector(selectProducts)
 
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep | null>(null)
@@ -26,9 +33,9 @@ export function HomePage() {
   const handleAddToCart = useCallback(
     (product: Product, element: HTMLElement) => {
       flyToCart(element)
-      addItem(product)
+      dispatch(addItem(product))
     },
-    [flyToCart, addItem]
+    [dispatch, flyToCart]
   )
 
   const handleBuyNow = useCallback((product: Product) => {
@@ -53,9 +60,9 @@ export function HomePage() {
   }, [])
 
   const handleContinue = useCallback((data: CheckoutData) => {
-    setCheckoutData(data)
+    dispatch(setCheckoutData(data))
     setCheckoutStep('SUMMARY')
-  }, [setCheckoutData])
+  }, [dispatch])
 
   const handleConfirm = useCallback(async () => {
     const result = await processPayment(checkoutData)
@@ -70,9 +77,9 @@ export function HomePage() {
   const handleFinish = useCallback(() => {
     setCheckoutStep(null)
     setPurchaseResult(null)
-    clearCart()
-    resetCheckoutData()
-  }, [clearCart, resetCheckoutData])
+    dispatch(clearCart())
+    dispatch(resetCheckoutData())
+  }, [dispatch])
 
   const handleRetry = useCallback(() => {
     setCheckoutStep('FORM')
@@ -96,7 +103,7 @@ export function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {MOCK_PRODUCTS.map((product) => (
+          {products.map((product) => (
             <ProductCard key={product.id} product={product} onBuyNow={handleBuyNow} onAddToCart={handleAddToCart} />
           ))}
         </div>
@@ -106,8 +113,8 @@ export function HomePage() {
         isOpen={isCartOpen}
         onClose={handleCloseCart}
         items={items}
-        onUpdateQuantity={updateQuantity}
-        onRemove={removeItem}
+        onUpdateQuantity={(id, delta) => dispatch(updateQuantity({ id, delta }))}
+        onRemove={(id) => dispatch(removeItem(id))}
         onCheckout={handleCheckout}
       />
 
