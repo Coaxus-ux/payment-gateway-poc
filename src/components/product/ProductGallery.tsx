@@ -12,7 +12,11 @@ export function ProductGallery({ mainImage, productName, onImageRef }: ProductGa
   const { animateImage } = useHeroImageAnimation()
   const [selectedImage, setSelectedImage] = useState(mainImage)
 
-  const gallery = [mainImage, `${mainImage}&blur=2`, `${mainImage}&grayscale=1`]
+  const gallery = [
+    mainImage,
+    `${mainImage}&auto=format&fit=crop&q=80&w=800&sat=-100`,
+    `${mainImage}&auto=format&fit=crop&q=80&w=800&hue=180`,
+  ]
 
   const handleImageRef = useCallback(
     (el: HTMLImageElement | null) => {
@@ -23,23 +27,30 @@ export function ProductGallery({ mainImage, productName, onImageRef }: ProductGa
   )
 
   return (
-    <div className="space-y-6">
-      <div className="aspect-4/5 rounded-[40px] overflow-hidden bg-dark/5 shadow-elevated border border-dark/5">
-        <img ref={handleImageRef} src={selectedImage} alt={productName} className="w-full h-full object-cover" />
+    <div className="space-y-8">
+      <div className="aspect-4/5 rounded-[48px] overflow-hidden bg-dark/5 shadow-2xl border border-white/40 group">
+        <img
+          ref={handleImageRef}
+          src={selectedImage}
+          alt={productName}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[3s] ease-out"
+        />
       </div>
 
-      <div className="flex gap-4 detail-anim">
+      <div className="flex gap-6 detail-fade">
         {gallery.map((img, i) => (
           <button
             key={i}
             type="button"
             onClick={() => setSelectedImage(img)}
             className={cn(
-              'w-24 h-24 rounded-2xl overflow-hidden border-2 transition-all',
-              selectedImage === img ? 'border-primary shadow-lg scale-105' : 'border-transparent opacity-60 hover:opacity-100'
+              'w-28 h-28 rounded-3xl overflow-hidden border-2 transition-all duration-500',
+              selectedImage === img
+                ? 'border-primary shadow-xl scale-110 ring-4 ring-primary/10'
+                : 'border-transparent opacity-40 hover:opacity-100 hover:scale-105'
             )}
           >
-            <img src={img} className="w-full h-full object-cover" alt={`${productName} angle ${i + 1}`} />
+            <img src={img} className="w-full h-full object-cover" alt={`Perspective ${i + 1}`} />
           </button>
         ))}
       </div>

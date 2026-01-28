@@ -18,40 +18,39 @@ export function useFlyingAnimation({ targetSelector, onComplete }: FlyingAnimati
       const sourceRect = sourceElement.getBoundingClientRect()
       const targetRect = target.getBoundingClientRect()
 
-      const flyingEl = document.createElement('div')
+      const flyingEl = sourceElement.cloneNode(true) as HTMLElement
       flyingEl.className = 'flying-item'
-      flyingEl.style.cssText = `
-        width: ${sourceRect.width}px;
-        height: ${sourceRect.height}px;
-        left: ${sourceRect.left}px;
-        top: ${sourceRect.top}px;
-      `
-
-      const img = sourceElement.cloneNode(true) as HTMLElement
-      img.style.cssText = 'width: 100%; height: 100%; object-fit: cover;'
-      flyingEl.appendChild(img)
+      flyingEl.style.width = `${sourceRect.width}px`
+      flyingEl.style.height = `${sourceRect.height}px`
+      flyingEl.style.left = `${sourceRect.left}px`
+      flyingEl.style.top = `${sourceRect.top}px`
       document.body.appendChild(flyingEl)
 
-      gsap.to(flyingEl, {
-        x: targetRect.left - sourceRect.left + targetRect.width / 2 - sourceRect.width / 2,
-        y: targetRect.top - sourceRect.top,
-        scale: 0.1,
-        opacity: 0,
-        duration: 0.6,
-        ease: 'power3.inOut',
+      const targetLeft = targetRect.left + targetRect.width / 2 - 25
+      const targetTop = targetRect.top + targetRect.height / 2 - 25
+
+      const tl = gsap.timeline({
         onComplete: () => {
           flyingEl.remove()
+          gsap.fromTo(
+            target,
+            { scale: 1, rotate: 0 },
+            { scale: 1.5, rotate: -15, duration: 0.3, yoyo: true, repeat: 1, ease: 'back.out(3)' }
+          )
           onComplete?.()
         },
       })
 
-      gsap.to(target, {
-        scale: 1.3,
-        duration: 0.2,
-        yoyo: true,
-        repeat: 1,
-        ease: 'power2.out',
-        delay: 0.4,
+      tl.to(flyingEl, {
+        duration: 1,
+        left: targetLeft,
+        top: targetTop,
+        width: 50,
+        height: 50,
+        opacity: 0,
+        scale: 0.1,
+        rotate: 360,
+        ease: 'power4.inOut',
       })
     },
     [targetSelector, onComplete]

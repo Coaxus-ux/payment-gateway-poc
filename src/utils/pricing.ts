@@ -1,10 +1,10 @@
 import type { CartItem } from '@/types'
 
-const currencyFormatter = new Intl.NumberFormat(undefined, {
+const currencyFormatter = new Intl.NumberFormat('es-CO', {
   style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
+  currency: 'COP',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
 })
 
 export function formatCurrency(value: number): string {
