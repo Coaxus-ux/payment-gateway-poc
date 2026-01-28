@@ -1,0 +1,5 @@
+export { ProductGallery } from './ProductGallery'
+export { ProductInfo } from './ProductInfo'
+export { ProductFeatures } from './ProductFeatures'
+export { ProductActions } from './ProductActions'
+export { BackButton } from './BackButton'

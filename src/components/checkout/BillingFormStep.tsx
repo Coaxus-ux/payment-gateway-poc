@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { FaCcVisa, FaCcMastercard } from 'react-icons/fa'
 import { HiArrowLeft } from 'react-icons/hi'
 import type { CheckoutData } from '@/types'
+import { getCardBrand, sanitizeCardNumber } from '@/utils/payment'
 import { CheckoutProgress } from './CheckoutProgress'
 
 interface BillingFormStepProps {
@@ -18,18 +19,18 @@ export function BillingFormStep({ initialData, onBack, onSubmit }: BillingFormSt
     onSubmit(formData)
   }
 
+  const updateField = <K extends keyof CheckoutData>(key: K, value: CheckoutData[K]) => {
+    setFormData((prev) => ({ ...prev, [key]: value }))
+  }
+
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').substring(0, 16)
-    setFormData({ ...formData, cardNumber: value })
+    updateField('cardNumber', sanitizeCardNumber(e.target.value))
   }
 
   const renderCardIcon = () => {
-    if (formData.cardNumber.startsWith('4')) {
-      return <FaCcVisa className="text-2xl text-blue-600" />
-    }
-    if (formData.cardNumber.startsWith('5')) {
-      return <FaCcMastercard className="text-2xl text-orange-500" />
-    }
+    const brand = getCardBrand(formData.cardNumber)
+    if (brand === 'visa') return <FaCcVisa className="text-2xl text-blue-600" />
+    if (brand === 'mastercard') return <FaCcMastercard className="text-2xl text-orange-500" />
     return null
   }
 
@@ -56,7 +57,7 @@ export function BillingFormStep({ initialData, onBack, onSubmit }: BillingFormSt
             <input
               placeholder="MM/YY"
               value={formData.expiryDate}
-              onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+              onChange={(e) => updateField('expiryDate', e.target.value)}
               className="flex-1 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
               required
             />
@@ -64,7 +65,7 @@ export function BillingFormStep({ initialData, onBack, onSubmit }: BillingFormSt
               placeholder="CVV"
               type="password"
               value={formData.cvv}
-              onChange={(e) => setFormData({ ...formData, cvv: e.target.value })}
+              onChange={(e) => updateField('cvv', e.target.value)}
               className="flex-1 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
               required
             />
@@ -74,14 +75,14 @@ export function BillingFormStep({ initialData, onBack, onSubmit }: BillingFormSt
           <input
             placeholder="Street Address"
             value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            onChange={(e) => updateField('address', e.target.value)}
             className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
             required
           />
           <input
             placeholder="City"
             value={formData.city}
-            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+            onChange={(e) => updateField('city', e.target.value)}
             className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
             required
           />
