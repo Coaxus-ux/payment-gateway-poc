@@ -81,6 +81,21 @@ export function ProductDetailPage() {
     setToast({ message, variant, requestId })
   }, [])
 
+  const buildSelectionFromCart = useCallback(() => {
+    if (items.length === 0) return null
+    const currency = items[0].currency ?? 'COP'
+    return {
+      items: items.map((item) => ({
+        id: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        currency: item.currency,
+      })),
+      amount: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+      currency,
+    }
+  }, [items])
+
   const handleBack = useCallback(() => {
     animateOut(() => navigate('/'))
   }, [animateOut, navigate])
@@ -97,7 +112,14 @@ export function ProductDetailPage() {
       dispatch(addItem(product))
       dispatch(
         setCheckoutSelection({
-          productId: product.id,
+          items: [
+            {
+              id: product.id,
+              quantity: 1,
+              price: product.price,
+              currency: product.currency,
+            },
+          ],
           amount: product.price,
           currency: product.currency ?? 'COP',
         })
@@ -116,17 +138,20 @@ export function ProductDetailPage() {
 
   const handleCheckout = useCallback(() => {
     if (items.length === 0) return
-    const primaryItem = items[0]
-    if (items.length > 1) {
-      showToast('Solo se procesará el primer producto del carrito.', 'info')
+    const currency = items[0].currency ?? 'COP'
+    const hasMixedCurrency = items.some((item) => (item.currency ?? currency) !== currency)
+    if (hasMixedCurrency) {
+      showToast('El carrito tiene monedas diferentes. Ajusta los productos.', 'error')
+      return
     }
-    dispatch(
-      setCheckoutSelection({
-        productId: primaryItem.id,
-        amount: primaryItem.price * primaryItem.quantity,
-        currency: primaryItem.currency ?? 'COP',
-      })
-    )
+    const selectionItems = items.map((item) => ({
+      id: item.id,
+      quantity: item.quantity,
+      price: item.price,
+      currency: item.currency,
+    }))
+    const amount = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    dispatch(setCheckoutSelection({ items: selectionItems, amount, currency }))
     setIsCartOpen(false)
     setCheckoutStep('PRODUCT_DETAIL')
   }, [dispatch, items, showToast])
@@ -137,18 +162,15 @@ export function ProductDetailPage() {
 
   const handleContinue = useCallback(
     async (data: { customer: CheckoutCustomer; delivery: CheckoutDelivery; card: CardData }) => {
-      const selection =
-        checkoutSelection ??
-        (items[0]
-          ? {
-              productId: items[0].id,
-              amount: items[0].price * items[0].quantity,
-              currency: items[0].currency ?? 'COP',
-            }
-          : null)
+      const selection = buildSelectionFromCart() ?? checkoutSelection
 
       if (!selection) {
         showToast('Selecciona un producto primero.', 'error')
+        return
+      }
+      const hasMixedCurrency = selection.items.some((item) => (item.currency ?? selection.currency) !== selection.currency)
+      if (hasMixedCurrency) {
+        showToast('El carrito tiene monedas diferentes. Ajusta los productos.', 'error')
         return
       }
 
@@ -159,7 +181,7 @@ export function ProductDetailPage() {
 
       try {
         const response = await createTransaction({
-          productId: selection.productId,
+          items: selection.items.map((item) => ({ productId: item.id, quantity: item.quantity })),
           amount: selection.amount,
           currency: selection.currency,
           customer: data.customer,
@@ -180,23 +202,28 @@ export function ProductDetailPage() {
           if (error.code === 'OUT_OF_STOCK') {
             showToast('Producto sin stock. Revisa el detalle.', 'error', error.requestId)
             setCheckoutStep(null)
-            if (selection.productId) {
-              dispatch(fetchProductById(selection.productId))
-            }
             return
           }
           if (error.code === 'AMOUNT_MISMATCH') {
             try {
-              const updated = await dispatch(fetchProductById(selection.productId)).unwrap()
-              const item = items.find((entry) => entry.id === updated.data.id)
-              const nextAmount = item ? updated.data.price * item.quantity : updated.data.price
-              dispatch(setCheckoutSelection({
-                productId: updated.data.id,
-                amount: nextAmount,
-                currency: updated.data.currency ?? selection.currency,
-              }))
-              dispatch(updateItemPrice({ id: updated.data.id, price: updated.data.price, currency: updated.data.currency }))
-              showToast('Precio actualizado desde el backend. Revisa el monto.', 'info', error.requestId)
+              const updates = await Promise.all(
+                selection.items.map((item) => dispatch(fetchProductById(item.id)).unwrap())
+              )
+              updates.forEach((updated) => {
+                dispatch(updateItemPrice({ id: updated.data.id, price: updated.data.price, currency: updated.data.currency }))
+              })
+              const nextItems = selection.items.map((item) => {
+                const updated = updates.find((entry) => entry.data.id === item.id)
+                return {
+                  ...item,
+                  price: updated?.data.price ?? item.price,
+                  currency: updated?.data.currency ?? item.currency,
+                }
+              })
+              const nextCurrency = nextItems[0]?.currency ?? selection.currency
+              const nextAmount = nextItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+              dispatch(setCheckoutSelection({ items: nextItems, amount: nextAmount, currency: nextCurrency }))
+              showToast('Precios actualizados desde el backend. Revisa el monto.', 'info', error.requestId)
             } catch {
               showToast(error.message, 'error', error.requestId)
             }
@@ -210,7 +237,7 @@ export function ProductDetailPage() {
         setIsCreatingTransaction(false)
       }
     },
-    [checkoutSelection, dispatch, items, showToast]
+    [buildSelectionFromCart, checkoutSelection, dispatch, showToast]
   )
 
   const handleUpdateDelivery = useCallback(
@@ -286,7 +313,7 @@ export function ProductDetailPage() {
   }, [])
 
   const handleFinish = useCallback(() => {
-    const selectedProductId = checkoutSelection?.productId ?? productId
+    const selectedProductId = checkoutSelection?.items?.[0]?.id ?? productId
     setCheckoutStep(null)
     setPurchaseResult(null)
     setCardData(null)
@@ -295,7 +322,7 @@ export function ProductDetailPage() {
     if (selectedProductId) {
       dispatch(fetchProductById(selectedProductId))
     }
-  }, [checkoutSelection?.productId, dispatch, productId])
+  }, [checkoutSelection?.items, dispatch, productId])
 
   const handleRetry = useCallback(() => {
     if (!cardData) {
@@ -305,6 +332,12 @@ export function ProductDetailPage() {
     }
     void handleConfirm()
   }, [cardData, handleConfirm])
+
+  const handleEditBilling = useCallback(() => {
+    setCardData(null)
+    setCheckoutStep('FORM')
+    setPurchaseResult(null)
+  }, [])
 
   const handleCloseModal = useCallback(() => {
     setCheckoutStep(null)
@@ -404,8 +437,9 @@ export function ProductDetailPage() {
       {checkoutStep && (
         <CheckoutModal
           product={product}
-          amount={checkoutSelection?.amount ?? product.price}
-          currency={checkoutSelection?.currency ?? product.currency ?? 'COP'}
+          items={items}
+          amount={checkoutSelection?.amount ?? items.reduce((sum, item) => sum + item.price * item.quantity, 0) ?? product.price}
+          currency={checkoutSelection?.currency ?? items[0]?.currency ?? product.currency ?? 'COP'}
           customer={checkoutCustomer}
           delivery={checkoutDelivery}
           step={checkoutStep}
@@ -421,6 +455,7 @@ export function ProductDetailPage() {
           purchaseResult={purchaseResult}
           onFinish={handleFinish}
           onRetry={handleRetry}
+          onEditBilling={handleEditBilling}
         />
       )}
 

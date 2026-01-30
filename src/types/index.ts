@@ -44,7 +44,12 @@ export interface CheckoutDelivery {
 }
 
 export interface CheckoutSelection {
-  productId: string
+  items: Array<{
+    id: string
+    quantity: number
+    price: number
+    currency?: string
+  }>
   amount: number
   currency: string
 }

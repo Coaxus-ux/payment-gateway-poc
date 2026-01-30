@@ -21,15 +21,28 @@ const emptyCard: CardData = {
   holderName: '',
 }
 
+const formatCardNumber = (value: string) =>
+  value
+    .replace(/\D/g, '')
+    .substring(0, 19)
+    .replace(/(\d{4})(?=\d)/g, '$1 ')
+
 export function BillingFormStep({ initialCustomer, initialDelivery, onBack, onSubmit, isSubmitting }: BillingFormStepProps) {
   const [customer, setCustomer] = useState<CheckoutCustomer>(initialCustomer)
   const [delivery, setDelivery] = useState<CheckoutDelivery>(initialDelivery)
   const [card, setCard] = useState<CardData>(emptyCard)
+  const [expiry, setExpiry] = useState('')
   const [touched, setTouched] = useState(false)
 
   const cardBrand = useMemo(() => getCardBrand(card.number), [card.number])
   const isCardNumberValid = useMemo(() => isValidLuhn(card.number), [card.number])
-  const isExpiryValid = useMemo(() => isValidExpiry(card.expMonth, card.expYear), [card.expMonth, card.expYear])
+  const [expMonth, expYear] = useMemo(() => {
+    const digits = expiry.replace(/\D/g, '').substring(0, 6)
+    const month = Number.parseInt(digits.slice(0, 2) || '0', 10)
+    const year = Number.parseInt(digits.slice(2) || '0', 10)
+    return [month, year]
+  }, [expiry])
+  const isExpiryValid = useMemo(() => isValidExpiry(expMonth, expYear), [expMonth, expYear])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,7 +50,7 @@ export function BillingFormStep({ initialCustomer, initialDelivery, onBack, onSu
 
     if (!isCardNumberValid || !isExpiryValid) return
 
-    onSubmit({ customer, delivery, card })
+    onSubmit({ customer, delivery, card: { ...card, expMonth, expYear } })
   }
 
   const renderCardIcon = () => {
@@ -65,27 +78,29 @@ export function BillingFormStep({ initialCustomer, initialDelivery, onBack, onSu
             className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
             required
           />
-          <input
-            placeholder="0000 0000 0000 0000"
-            value={card.number}
-            onChange={(e) => setCard((prev) => ({ ...prev, number: sanitizeCardNumber(e.target.value) }))}
-            className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all font-mono"
-            required
-          />
+          <div className="relative">
+            <input
+              placeholder="0000 0000 0000 0000"
+              value={formatCardNumber(card.number)}
+              onChange={(e) => setCard((prev) => ({ ...prev, number: sanitizeCardNumber(e.target.value) }))}
+              className="w-full px-5 py-4 pr-12 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all font-mono"
+              inputMode="numeric"
+              required
+            />
+            <div className="absolute right-4 top-1/2 -translate-y-1/2">{renderCardIcon()}</div>
+          </div>
           {touched && !isCardNumberValid && <p className="text-xs text-red-500 font-semibold">Invalid card number (Luhn).</p>}
           <div className="flex gap-3">
             <input
-              placeholder="MM"
-              value={card.expMonth || ''}
-              onChange={(e) => setCard((prev) => ({ ...prev, expMonth: Number.parseInt(e.target.value || '0', 10) }))}
+              placeholder="MM/YYYY"
+              value={expiry}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, '').substring(0, 6)
+                const next = digits.length <= 2 ? digits : `${digits.slice(0, 2)}/${digits.slice(2)}`
+                setExpiry(next)
+              }}
               className="flex-1 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
-              required
-            />
-            <input
-              placeholder="YYYY"
-              value={card.expYear || ''}
-              onChange={(e) => setCard((prev) => ({ ...prev, expYear: Number.parseInt(e.target.value || '0', 10) }))}
-              className="flex-1 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
+              inputMode="numeric"
               required
             />
             <input
@@ -156,11 +171,7 @@ export function BillingFormStep({ initialCustomer, initialDelivery, onBack, onSu
             required
           />
         </div>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full py-5 rounded-2xl bg-primary text-white font-black shadow-xl shadow-primary/30 active:scale-95 transition-all"
-        >
+        <button type="submit" disabled={isSubmitting} className="w-full py-5 rounded-2xl bg-primary text-white font-black shadow-xl shadow-primary/30 active:scale-95 transition-all">
           {isSubmitting ? 'Processing...' : 'Review Order'}
         </button>
       </form>

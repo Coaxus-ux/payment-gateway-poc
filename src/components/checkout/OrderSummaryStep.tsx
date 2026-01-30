@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import type { CheckoutCustomer, CheckoutDelivery, Product } from '@/types'
+import type { CartItem, CheckoutCustomer, CheckoutDelivery } from '@/types'
 import { formatCurrency } from '@/utils/pricing'
 import { CheckoutProgress } from './CheckoutProgress'
 
 interface OrderSummaryStepProps {
-  product: Product
+  items: CartItem[]
   amount: number
   currency: string
   customer: CheckoutCustomer
@@ -15,7 +15,7 @@ interface OrderSummaryStepProps {
   isUpdatingDelivery?: boolean
 }
 
-export function OrderSummaryStep({ product, amount, currency, customer, delivery, onUpdateDelivery, onPay, isPaying, isUpdatingDelivery }: OrderSummaryStepProps) {
+export function OrderSummaryStep({ items, amount, currency, customer, delivery, onUpdateDelivery, onPay, isPaying, isUpdatingDelivery }: OrderSummaryStepProps) {
   const [isEditingDelivery, setIsEditingDelivery] = useState(false)
   const [draftDelivery, setDraftDelivery] = useState<CheckoutDelivery>(delivery)
 
@@ -33,16 +33,30 @@ export function OrderSummaryStep({ product, amount, currency, customer, delivery
       <CheckoutProgress currentStep="SUMMARY" />
       <h2 className="text-2xl font-black text-dark tracking-tighter mb-6 text-center">Order Summary</h2>
 
-      <div className="flex gap-4 items-center bg-dark/5 p-4 rounded-3xl mb-6">
-        <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white">
-          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+      <div className="bg-dark/5 p-4 rounded-3xl mb-6 space-y-4">
+        <p className="text-xs uppercase tracking-[0.3em] text-dark/40 font-black">Items</p>
+        <div className="space-y-3">
+          {items.map((item) => (
+            <div key={item.id} className="flex items-center gap-4 bg-white/70 rounded-2xl p-3">
+              <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white">
+                <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+              </div>
+              <div className="flex-1">
+                <p className="font-black text-dark">{item.name}</p>
+                <p className="text-xs text-dark/50">
+                  x{item.quantity} · {formatCurrency(item.price, item.currency ?? currency)}
+                </p>
+              </div>
+              <div className="font-black text-dark">
+                {formatCurrency(item.price * item.quantity, item.currency ?? currency)}
+              </div>
+            </div>
+          ))}
         </div>
-        <div className="flex-1">
-          <p className="text-xs uppercase tracking-[0.3em] text-dark/40 font-black">Product</p>
-          <p className="font-black text-dark text-lg leading-tight">{product.name}</p>
-          <p className="text-sm text-dark/60">Stock {product.stock}</p>
+        <div className="flex items-center justify-between pt-2 border-t border-dark/10">
+          <span className="text-xs uppercase tracking-[0.3em] text-dark/40 font-black">Total</span>
+          <span className="font-black text-dark text-lg">{formatCurrency(amount, currency)}</span>
         </div>
-        <div className="font-black text-dark">{formatCurrency(amount, currency)}</div>
       </div>
 
       <div className="bg-dark text-white rounded-3xl p-6 mb-6 space-y-4 shadow-2xl">

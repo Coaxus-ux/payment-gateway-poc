@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
-import type { CardData, CheckoutCustomer, CheckoutDelivery, CheckoutStep, Product, PurchaseResult } from '@/types'
+import type { CardData, CartItem, CheckoutCustomer, CheckoutDelivery, CheckoutStep, Product, PurchaseResult } from '@/types'
 import { useModalAnimation } from '@/hooks'
 import { ProductDetailStep, BillingFormStep, OrderSummaryStep, CheckoutResultStep } from './checkout'
 
 interface CheckoutModalProps {
   product: Product | null
+  items: CartItem[]
   amount: number
   currency: string
   customer: CheckoutCustomer
@@ -22,10 +23,12 @@ interface CheckoutModalProps {
   purchaseResult: PurchaseResult | null
   onFinish: () => void
   onRetry: () => void
+  onEditBilling: () => void
 }
 
 export function CheckoutModal({
   product,
+  items,
   amount,
   currency,
   customer,
@@ -43,6 +46,7 @@ export function CheckoutModal({
   purchaseResult,
   onFinish,
   onRetry,
+  onEditBilling,
 }: CheckoutModalProps) {
   const { modalRef, contentRef, backdropRef, animateContent } = useModalAnimation()
 
@@ -55,13 +59,13 @@ export function CheckoutModal({
       <div ref={backdropRef} onClick={onClose} className="absolute inset-0 bg-dark/40 backdrop-blur-md opacity-0" />
       <div ref={modalRef} className="bg-white w-full sm:max-w-xl sm:rounded-[40px] rounded-t-[40px] shadow-2xl relative z-10 overflow-hidden transform-gpu">
         <div ref={contentRef}>
-          {step === 'PRODUCT_DETAIL' && <ProductDetailStep product={product} onClose={onClose} onContinue={onStartCheckout} />}
+          {step === 'PRODUCT_DETAIL' && <ProductDetailStep product={product} items={items} onClose={onClose} onContinue={onStartCheckout} />}
           {step === 'FORM' && (
             <BillingFormStep initialCustomer={customer} initialDelivery={delivery} onBack={onBack} onSubmit={onContinue} isSubmitting={isCreatingTransaction} />
           )}
-          {step === 'SUMMARY' && product && (
+          {step === 'SUMMARY' && (
             <OrderSummaryStep
-              product={product}
+              items={items}
               amount={amount}
               currency={currency}
               customer={customer}
@@ -72,7 +76,9 @@ export function CheckoutModal({
               isUpdatingDelivery={isUpdatingDelivery}
             />
           )}
-          {step === 'RESULT' && <CheckoutResultStep result={purchaseResult} onFinish={onFinish} onRetry={onRetry} />}
+          {step === 'RESULT' && (
+            <CheckoutResultStep result={purchaseResult} onFinish={onFinish} onRetry={onRetry} onEditBilling={onEditBilling} isPaying={isPaying} />
+          )}
         </div>
       </div>
     </div>

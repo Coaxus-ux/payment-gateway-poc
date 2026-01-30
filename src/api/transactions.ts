@@ -2,7 +2,10 @@ import type { CardData, CheckoutCustomer, CheckoutDelivery } from '@/types'
 import { fetchJson } from './client'
 
 export interface CreateTransactionPayload {
-  productId: string
+  items: Array<{
+    productId: string
+    quantity: number
+  }>
   amount: number
   currency: string
   customer: CheckoutCustomer
