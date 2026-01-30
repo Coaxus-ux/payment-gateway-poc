@@ -318,8 +318,12 @@ export function ProductDetailPage() {
   }, [cardData, checkoutIds.transactionId, dispatch, showToast])
 
   const handleBackStep = useCallback(() => {
+    if (checkoutStep === 'FORM') {
+      setCheckoutStep('EMAIL')
+      return
+    }
     setCheckoutStep('PRODUCT_DETAIL')
-  }, [])
+  }, [checkoutStep])
 
   const handleFinish = useCallback(() => {
     const selectedProductId = checkoutSelection?.items?.[0]?.id ?? productId

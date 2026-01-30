@@ -361,8 +361,12 @@ export function HomePage() {
   }, [cardData, checkoutIds.transactionId, dispatch, showToast])
 
   const handleBack = useCallback(() => {
+    if (checkoutStep === 'FORM') {
+      setCheckoutStep('EMAIL')
+      return
+    }
     setCheckoutStep('PRODUCT_DETAIL')
-  }, [])
+  }, [checkoutStep])
 
   const handleFinish = useCallback(() => {
     const productId = checkoutSelection?.items?.[0]?.id
