@@ -19,7 +19,7 @@ const initialDelivery: CheckoutDelivery = {
   postalCode: '',
 }
 
-const createInitialCheckoutData = (): CheckoutData => ({
+export const createInitialCheckoutData = (): CheckoutData => ({
   selection: null,
   customer: { ...initialCustomer },
   delivery: { ...initialDelivery },
@@ -32,6 +32,11 @@ const initialState: CartState = {
   items: [],
   checkoutData: createInitialCheckoutData(),
 }
+
+export const createInitialCartState = (items: CartItem[] = []): CartState => ({
+  items,
+  checkoutData: createInitialCheckoutData(),
+})
 
 const cartSlice = createSlice({
   name: 'cart',
