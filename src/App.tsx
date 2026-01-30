@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { HomePage, ProductDetailPage } from '@/pages'
+import { AdminPage, HomePage, ProductDetailPage } from '@/pages'
 
 export default function App() {
   return (
@@ -7,6 +7,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/product/:productId" element={<ProductDetailPage />} />
+        <Route path="/admin" element={<AdminPage />} />
       </Routes>
     </BrowserRouter>
   )

@@ -77,3 +77,48 @@ export interface PurchaseResult {
   message?: string
   requestId?: string
 }
+
+export interface CustomerProfile {
+  customer: CheckoutCustomer
+  delivery: CheckoutDelivery | null
+  lastTransactionId?: string | null
+}
+
+export interface AdminTransactionItem {
+  id: string
+  productId: string
+  quantity: number
+  unitPriceAmount: number
+  currency: string
+  productSnapshot: {
+    id: string
+    name: string
+    description: string | null
+    imageUrls: string[]
+    priceAmount: number
+    currency: string
+  }
+}
+
+export interface AdminTransaction {
+  id: string
+  status: string
+  amount: number
+  currency: string
+  createdAt: string
+  customer: {
+    id: string
+    email: string
+    fullName: string
+    phone: string | null
+  }
+  delivery: {
+    id: string
+    addressLine1: string
+    addressLine2: string | null
+    city: string
+    country: string
+    postalCode: string | null
+  }
+  items: AdminTransactionItem[]
+}
