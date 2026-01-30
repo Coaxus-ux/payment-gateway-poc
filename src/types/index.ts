@@ -28,7 +28,7 @@ export interface CartItem {
   longDescription?: string
 }
 
-export type CheckoutStep = 'PRODUCT_DETAIL' | 'FORM' | 'SUMMARY' | 'RESULT'
+export type CheckoutStep = 'PRODUCT_DETAIL' | 'EMAIL' | 'FORM' | 'SUMMARY' | 'RESULT'
 
 export interface CheckoutCustomer {
   email: string

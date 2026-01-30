@@ -157,8 +157,17 @@ export function ProductDetailPage() {
   }, [dispatch, items, showToast])
 
   const handleStartCheckout = useCallback(() => {
-    setCheckoutStep('FORM')
+    setCheckoutStep('EMAIL')
   }, [])
+
+  const handleLookupEmail = useCallback(
+    (data: { customer: CheckoutCustomer; delivery: CheckoutDelivery }) => {
+      dispatch(setCheckoutCustomer(data.customer))
+      dispatch(setCheckoutDelivery(data.delivery))
+      setCheckoutStep('FORM')
+    },
+    [dispatch]
+  )
 
   const handleContinue = useCallback(
     async (data: { customer: CheckoutCustomer; delivery: CheckoutDelivery; card: CardData }) => {
@@ -445,6 +454,7 @@ export function ProductDetailPage() {
           step={checkoutStep}
           onClose={handleCloseModal}
           onStartCheckout={handleStartCheckout}
+          onLookupEmail={handleLookupEmail}
           onContinue={handleContinue}
           onConfirm={handleConfirm}
           onUpdateDelivery={handleUpdateDelivery}

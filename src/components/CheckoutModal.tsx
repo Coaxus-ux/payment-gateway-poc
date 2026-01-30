@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import type { CardData, CartItem, CheckoutCustomer, CheckoutDelivery, CheckoutStep, Product, PurchaseResult } from '@/types'
 import { useModalAnimation } from '@/hooks'
-import { ProductDetailStep, BillingFormStep, OrderSummaryStep, CheckoutResultStep } from './checkout'
+import { ProductDetailStep, BillingFormStep, OrderSummaryStep, CheckoutResultStep, EmailLookupStep } from './checkout'
 
 interface CheckoutModalProps {
   product: Product | null
@@ -13,6 +13,7 @@ interface CheckoutModalProps {
   step: CheckoutStep
   onClose: () => void
   onStartCheckout: () => void
+  onLookupEmail: (data: { customer: CheckoutCustomer; delivery: CheckoutDelivery }) => void
   onContinue: (data: { customer: CheckoutCustomer; delivery: CheckoutDelivery; card: CardData }) => void
   onConfirm: () => void
   onUpdateDelivery: (delivery: CheckoutDelivery) => void
@@ -36,6 +37,7 @@ export function CheckoutModal({
   step,
   onClose,
   onStartCheckout,
+  onLookupEmail,
   onContinue,
   onConfirm,
   onUpdateDelivery,
@@ -60,6 +62,9 @@ export function CheckoutModal({
       <div ref={modalRef} className="bg-white w-full sm:max-w-xl sm:rounded-[40px] rounded-t-[40px] shadow-2xl relative z-10 overflow-hidden transform-gpu">
         <div ref={contentRef}>
           {step === 'PRODUCT_DETAIL' && <ProductDetailStep product={product} items={items} onClose={onClose} onContinue={onStartCheckout} />}
+          {step === 'EMAIL' && (
+            <EmailLookupStep initialCustomer={customer} initialDelivery={delivery} onBack={onBack} onContinue={onLookupEmail} />
+          )}
           {step === 'FORM' && (
             <BillingFormStep initialCustomer={customer} initialDelivery={delivery} onBack={onBack} onSubmit={onContinue} isSubmitting={isCreatingTransaction} />
           )}

@@ -1,4 +1,5 @@
 export { CheckoutProgress } from './CheckoutProgress'
+export { EmailLookupStep } from './EmailLookupStep'
 export { ProductDetailStep } from './ProductDetailStep'
 export { BillingFormStep } from './BillingFormStep'
 export { OrderSummaryStep } from './OrderSummaryStep'

@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { FaCcVisa, FaCcMastercard } from 'react-icons/fa'
 import { HiArrowLeft } from 'react-icons/hi'
 import type { CardData, CheckoutCustomer, CheckoutDelivery } from '@/types'
-import { getCustomerProfile } from '@/api/customers'
-import { isApiError } from '@/api/client'
 import { getCardBrand, isValidExpiry, isValidLuhn, sanitizeCardNumber } from '@/utils/payment'
 import { CheckoutProgress } from './CheckoutProgress'
 
@@ -35,8 +33,6 @@ export function BillingFormStep({ initialCustomer, initialDelivery, onBack, onSu
   const [card, setCard] = useState<CardData>(emptyCard)
   const [expiry, setExpiry] = useState('')
   const [touched, setTouched] = useState(false)
-  const [isLookupLoading, setIsLookupLoading] = useState(false)
-  const lastLookupRef = useRef<string | null>(null)
 
   const cardBrand = useMemo(() => getCardBrand(card.number), [card.number])
   const isCardNumberValid = useMemo(() => isValidLuhn(card.number), [card.number])
@@ -47,42 +43,6 @@ export function BillingFormStep({ initialCustomer, initialDelivery, onBack, onSu
     return [month, year]
   }, [expiry])
   const isExpiryValid = useMemo(() => isValidExpiry(expMonth, expYear), [expMonth, expYear])
-
-  useEffect(() => {
-    const email = customer.email.trim()
-    if (!email || !email.includes('@')) return
-    if (email === lastLookupRef.current) return
-
-    const timer = setTimeout(async () => {
-      setIsLookupLoading(true)
-      try {
-        const response = await getCustomerProfile(email)
-        lastLookupRef.current = email
-        const profile = response.data
-        setCustomer((prev) => ({
-          ...prev,
-          email: profile.customer.email,
-          fullName: profile.customer.fullName || prev.fullName,
-          phone: profile.customer.phone || prev.phone,
-        }))
-        if (profile.delivery) {
-          setDelivery((prev) => ({
-            ...prev,
-            ...profile.delivery,
-          }))
-        }
-      } catch (error) {
-        if (isApiError(error) && error.status === 404) {
-          lastLookupRef.current = email
-          return
-        }
-      } finally {
-        setIsLookupLoading(false)
-      }
-    }, 450)
-
-    return () => clearTimeout(timer)
-  }, [customer.email])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -139,7 +99,7 @@ export function BillingFormStep({ initialCustomer, initialDelivery, onBack, onSu
                 const next = digits.length <= 2 ? digits : `${digits.slice(0, 2)}/${digits.slice(2)}`
                 setExpiry(next)
               }}
-              className="flex-1 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
+              className="flex-1 min-w-0 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
               inputMode="numeric"
               required
             />
@@ -148,7 +108,7 @@ export function BillingFormStep({ initialCustomer, initialDelivery, onBack, onSu
               type="password"
               value={card.cvc}
               onChange={(e) => setCard((prev) => ({ ...prev, cvc: e.target.value.replace(/\D/g, '').substring(0, 4) }))}
-              className="flex-1 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
+              className="flex-1 min-w-0 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
               required
             />
           </div>
@@ -163,7 +123,6 @@ export function BillingFormStep({ initialCustomer, initialDelivery, onBack, onSu
             className="w-full px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
             required
           />
-          {isLookupLoading && <p className="text-xs text-dark/50 font-semibold">Buscando datos guardados...</p>}
           <input
             placeholder="Full Name"
             value={customer.fullName}
@@ -193,14 +152,14 @@ export function BillingFormStep({ initialCustomer, initialDelivery, onBack, onSu
               placeholder="City"
               value={delivery.city}
               onChange={(e) => setDelivery((prev) => ({ ...prev, city: e.target.value }))}
-              className="flex-1 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
+              className="flex-1 min-w-0 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
               required
             />
             <input
               placeholder="Postal Code"
               value={delivery.postalCode}
               onChange={(e) => setDelivery((prev) => ({ ...prev, postalCode: e.target.value }))}
-              className="flex-1 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
+              className="flex-1 min-w-0 px-5 py-4 rounded-xl bg-dark/5 border-2 border-transparent focus:border-info focus:bg-white outline-none transition-all"
               required
             />
           </div>

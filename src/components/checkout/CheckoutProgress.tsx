@@ -1,6 +1,6 @@
 import type { CheckoutStep } from '@/types'
 
-const STEPS: CheckoutStep[] = ['PRODUCT_DETAIL', 'FORM', 'SUMMARY', 'RESULT']
+const STEPS: CheckoutStep[] = ['PRODUCT_DETAIL', 'EMAIL', 'FORM', 'SUMMARY', 'RESULT']
 
 interface CheckoutProgressProps {
   currentStep: CheckoutStep
